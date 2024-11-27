@@ -25,8 +25,38 @@ app.use(cors({
     methods: ['*'],
 }));
 
+app.use(express.static(path.join(__dirname, 'build')));
+
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'build', 'index.html'));
+});
+
+app.get('/files', (req, res) => {
+    const uploadDir = path.join(__dirname, 'uploadfile');
+
+    fs.readdir(uploadDir, (err, files) => {
+        if (err) {
+            console.error('Error reading directory:', err);
+            return res.status(500).json({ error: 'Failed to read files' });
+        }
+
+        const fileData = files.map((file, index) => {
+            const filePath = path.join(uploadDir, file);
+            const stats = fs.statSync(filePath);
+
+            return {
+                id: index + 1,
+                name: file,
+                type: path.extname(file),
+                time: new Date(stats.mtime).toLocaleString(), // ใช้เวลาล่าสุดของไฟล์
+            };
+        });
+
+        res.status(200).json(fileData);
+    });
+});
+
 app.post('/upload', upload.single('file'), (req, res) => {
-    console.log('Incoming request:', req.body);
     if (!req.file) {
         return res.status(400).send({ error: 'No file uploaded' });
     }
